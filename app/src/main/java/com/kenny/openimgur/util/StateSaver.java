@@ -66,4 +66,8 @@ public class StateSaver {
 
         return false;
     }
+
+    public boolean remove(@NonNull String key) {
+        return savedStateCache != null && savedStateCache.remove(key) != null;
+    }
 }
