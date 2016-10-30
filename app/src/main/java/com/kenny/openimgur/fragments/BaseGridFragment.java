@@ -3,7 +3,6 @@ package com.kenny.openimgur.fragments;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -26,6 +25,7 @@ import com.kenny.openimgur.ui.adapters.GalleryAdapter;
 import com.kenny.openimgur.util.ImageUtil;
 import com.kenny.openimgur.util.LogUtil;
 import com.kenny.openimgur.util.RequestCodes;
+import com.kenny.openimgur.util.StateSaver;
 import com.kenny.openimgur.util.ViewUtils;
 import com.kennyc.view.MultiStateView;
 import com.nostra13.universalimageloader.core.ImageLoader;
@@ -45,13 +45,13 @@ import retrofit2.Response;
 public abstract class BaseGridFragment extends BaseFragment implements Callback<GalleryResponse>, View.OnClickListener {
     private static final String KEY_CURRENT_POSITION = "position";
 
-    private static final String KEY_ITEMS = "items";
-
     private static final String KEY_CURRENT_PAGE = "page";
 
     private static final String KEY_REQUEST_ID = "requestId";
 
     private static final String KEY_HAS_MORE = "hasMore";
+
+    private final String KEY_ITEMS = TAG + ".items." + TAG.hashCode();
 
     @BindView(R.id.multiView)
     protected MultiStateView mMultiStateView;
@@ -214,14 +214,13 @@ public abstract class BaseGridFragment extends BaseFragment implements Callback<
             mCurrentPage = savedInstanceState.getInt(KEY_CURRENT_PAGE, 0);
             mRequestId = savedInstanceState.getString(KEY_REQUEST_ID, null);
             mHasMore = savedInstanceState.getBoolean(KEY_HAS_MORE, true);
+            ArrayList<ImgurBaseObject> items = StateSaver.instance().getData(savedInstanceState, KEY_ITEMS);
 
-            if (savedInstanceState.containsKey(KEY_ITEMS)) {
-                ArrayList<ImgurBaseObject> items = savedInstanceState.getParcelableArrayList(KEY_ITEMS);
+            if (items != null && !items.isEmpty()) {
                 int currentPosition = savedInstanceState.getInt(KEY_CURRENT_POSITION, 0);
                 setAdapter(new GalleryAdapter(getActivity(), SetUniqueList.decorate(items), this, showPoints()));
                 mGrid.scrollToPosition(currentPosition);
-                if (mListener != null)
-                    mListener.onFragmentStateChange(FragmentListener.STATE_LOADING_COMPLETE);
+                if (mListener != null) mListener.onFragmentStateChange(FragmentListener.STATE_LOADING_COMPLETE);
                 mMultiStateView.setViewState(MultiStateView.VIEW_STATE_CONTENT);
             }
         }
@@ -236,12 +235,7 @@ public abstract class BaseGridFragment extends BaseFragment implements Callback<
         GalleryAdapter adapter = getAdapter();
 
         if (adapter != null && !adapter.isEmpty()) {
-            // Saving the entire adapter can cause a crash in N
-            if (isApiLevel(Build.VERSION_CODES.N) && adapter.getItemCount() > GalleryAdapter.MAX_ITEMS) {
-                return;
-            }
-
-            outState.putParcelableArrayList(KEY_ITEMS, adapter.retainItems());
+            StateSaver.instance().onSaveState(outState, KEY_ITEMS, adapter.retainItems());
             GridLayoutManager manager = (GridLayoutManager) mGrid.getLayoutManager();
             outState.putInt(KEY_CURRENT_POSITION, manager.findFirstVisibleItemPosition());
         }
