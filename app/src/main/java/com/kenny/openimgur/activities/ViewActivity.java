@@ -57,6 +57,7 @@ import com.kenny.openimgur.ui.ViewPager;
 import com.kenny.openimgur.ui.adapters.CommentAdapter;
 import com.kenny.openimgur.util.LinkUtils;
 import com.kenny.openimgur.util.LogUtil;
+import com.kenny.openimgur.util.StateSaver;
 import com.kenny.openimgur.util.ViewUtils;
 import com.kennyc.bottomsheet.BottomSheet;
 import com.kennyc.bottomsheet.BottomSheetListener;
@@ -139,11 +140,11 @@ public class ViewActivity extends BaseActivity implements View.OnClickListener, 
 
     private static final String KEY_VIEW_FOR_ALBUM = "view_link_for_album";
 
-    private static final String KEY_COMMENT = "comments";
+    private static final String KEY_COMMENT = "view.activity.comments";
 
     private static final String KEY_POSITION = "position";
 
-    private static final String KEY_OBJECTS = "objects";
+    private static final String KEY_OBJECTS = "view.activity.objects";
 
     private static final String KEY_SORT = "commentSort";
 
@@ -299,7 +300,7 @@ public class ViewActivity extends BaseActivity implements View.OnClickListener, 
      * @param savedInstanceState Bundle if restoring
      */
     private void handleIntent(Intent intent, Bundle savedInstanceState) {
-        if (savedInstanceState != null && savedInstanceState.containsKey(KEY_OBJECTS)) {
+        if (StateSaver.instance().contains(savedInstanceState, KEY_OBJECTS)) {
             LogUtil.v(TAG, "Bundle present, will restore in onPostCreate");
             return;
         }
@@ -397,7 +398,7 @@ public class ViewActivity extends BaseActivity implements View.OnClickListener, 
             mLoadComments = savedInstanceState.getBoolean(KEY_LOAD_COMMENTS, true);
             mIsResuming = true;
             mCurrentPosition = savedInstanceState.getInt(KEY_POSITION, 0);
-            ArrayList<ImgurBaseObject> objects = savedInstanceState.getParcelableArrayList(KEY_OBJECTS);
+            ArrayList<ImgurBaseObject> objects = StateSaver.instance().getData(savedInstanceState, KEY_OBJECTS);
             mPagerAdapter = new BrowsingAdapter(getApplicationContext(), getFragmentManager(), objects);
             mViewPager.setAdapter(mPagerAdapter);
             mViewPager.setCurrentItem(mCurrentPosition);
@@ -406,9 +407,9 @@ public class ViewActivity extends BaseActivity implements View.OnClickListener, 
                 mSideGalleryFragment.addGalleryItems(objects);
             }
 
-            List<ImgurComment> comments = savedInstanceState.getParcelableArrayList(KEY_COMMENT);
+            List<ImgurComment> comments = StateSaver.instance().getData(savedInstanceState, KEY_COMMENT);
 
-            if (comments != null) {
+            if (comments != null && !comments.isEmpty()) {
                 mCommentAdapter = new CommentAdapter(this, comments, this);
                 mCommentList.setAdapter(mCommentAdapter);
             }
@@ -443,13 +444,16 @@ public class ViewActivity extends BaseActivity implements View.OnClickListener, 
     @Override
     protected void onDestroy() {
         dismissDialogFragment("comment");
+        boolean isFinishing = isFinishing();
 
         if (mCommentAdapter != null) {
+            if (isFinishing) StateSaver.instance().remove(KEY_COMMENT);
             mCommentAdapter.onDestroy();
             mCommentAdapter = null;
         }
 
         if (mPagerAdapter != null) {
+            if (isFinishing) StateSaver.instance().remove(KEY_OBJECTS);
             mPagerAdapter.clear();
             mPagerAdapter = null;
         }
@@ -664,7 +668,7 @@ public class ViewActivity extends BaseActivity implements View.OnClickListener, 
         super.onSaveInstanceState(outState);
 
         if (mCommentAdapter != null && !mCommentAdapter.isEmpty()) {
-            outState.putParcelableArrayList(KEY_COMMENT, mCommentAdapter.retainItems());
+            StateSaver.instance().onSaveState(outState, KEY_COMMENT, mCommentAdapter.retainItems());
         }
 
         outState.putBoolean(KEY_LOAD_COMMENTS, mLoadComments);
@@ -672,7 +676,7 @@ public class ViewActivity extends BaseActivity implements View.OnClickListener, 
 
         if (mPagerAdapter != null && !mPagerAdapter.isEmpty()) {
             outState.putInt(KEY_POSITION, mViewPager.getCurrentItem());
-            outState.putParcelableArrayList(KEY_OBJECTS, mPagerAdapter.retainItems());
+            StateSaver.instance().onSaveState(outState, KEY_OBJECTS, mPagerAdapter.retainItems());
         }
 
         if (mBottomSheetBehavior != null) {

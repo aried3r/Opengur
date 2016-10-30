@@ -57,14 +57,12 @@ public class StateSaver {
         return null;
     }
 
-    public boolean contains(@NonNull String key, @Nullable Bundle bundle) {
+    public boolean contains(@Nullable Bundle bundle, @NonNull String key) {
         if (savedStateCache != null) {
             return savedStateCache.get(key) != null;
-        } else if (bundle != null) {
-            bundle.containsKey(key);
         }
 
-        return false;
+        return bundle != null && bundle.containsKey(key);
     }
 
     public boolean remove(@NonNull String key) {
