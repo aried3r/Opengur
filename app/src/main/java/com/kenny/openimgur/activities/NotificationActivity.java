@@ -26,6 +26,7 @@ import com.kenny.openimgur.ui.adapters.NotificationAdapter;
 import com.kenny.openimgur.util.DBContracts;
 import com.kenny.openimgur.util.LogUtil;
 import com.kenny.openimgur.util.SqlHelper;
+import com.kenny.openimgur.util.StateSaver;
 import com.kenny.openimgur.util.ViewUtils;
 import com.kennyc.view.MultiStateView;
 
@@ -43,7 +44,7 @@ import retrofit2.Response;
 public class NotificationActivity extends BaseActivity implements View.OnClickListener, View.OnLongClickListener, ActionMode.Callback {
     public static final String KEY_USER_NOT_LOGGED_IN = "no_user";
 
-    private static final String KEY_ITEMS = "items";
+    private static final String KEY_ITEMS = "notification.activity.items";
 
     private static final String KEY_POSITION = "position";
 
@@ -75,15 +76,13 @@ public class NotificationActivity extends BaseActivity implements View.OnClickLi
         setContentView(R.layout.activity_notifications);
         mList.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
 
-        if (savedInstanceState != null) {
-            List<ImgurNotification> notifications = savedInstanceState.getParcelableArrayList(KEY_ITEMS);
+        List<ImgurNotification> notifications = StateSaver.instance().getData(savedInstanceState, KEY_ITEMS);
 
-            if (notifications != null && !notifications.isEmpty()) {
-                int position = savedInstanceState.getInt(KEY_POSITION, 0);
-                mList.setAdapter(mAdapter = new NotificationAdapter(this, notifications, this, this));
-                mList.scrollToPosition(position);
-                mMultiView.setViewState(MultiStateView.VIEW_STATE_CONTENT);
-            }
+        if (notifications != null && !notifications.isEmpty()) {
+            int position = savedInstanceState.getInt(KEY_POSITION, 0);
+            mList.setAdapter(mAdapter = new NotificationAdapter(this, notifications, this, this));
+            mList.scrollToPosition(position);
+            mMultiView.setViewState(MultiStateView.VIEW_STATE_CONTENT);
         }
     }
 
@@ -285,7 +284,7 @@ public class NotificationActivity extends BaseActivity implements View.OnClickLi
         super.onSaveInstanceState(outState);
 
         if (mAdapter != null && !mAdapter.isEmpty()) {
-            outState.putParcelableArrayList(KEY_ITEMS, mAdapter.retainItems());
+            StateSaver.instance().onSaveState(outState, KEY_ITEMS, mAdapter.retainItems());
             LinearLayoutManager manager = (LinearLayoutManager) mList.getLayoutManager();
             outState.putInt(KEY_POSITION, manager.findFirstVisibleItemPosition());
         }
