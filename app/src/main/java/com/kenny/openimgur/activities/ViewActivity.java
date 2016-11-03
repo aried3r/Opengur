@@ -458,6 +458,8 @@ public class ViewActivity extends BaseActivity implements View.OnClickListener, 
             mPagerAdapter = null;
         }
 
+        StateSaver.instance().remove(KEY_OBJECTS);
+
         super.onDestroy();
     }
 

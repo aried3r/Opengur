@@ -245,6 +245,7 @@ public abstract class BaseGridFragment extends BaseFragment implements Callback<
     public void onDestroyView() {
         GalleryAdapter adapter = getAdapter();
         if (adapter != null) adapter.onDestroy();
+        StateSaver.instance().remove(KEY_ITEMS);
         super.onDestroyView();
     }
 
